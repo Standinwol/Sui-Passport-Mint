@@ -11,8 +11,10 @@ const { Worker, isMainThread, parentPort, workerData } = require('worker_threads
 const ora = require('ora');
 const Table = require('cli-table3');
 const nacl = require('tweetnacl');
-const pLimit = require('p-limit');
-const {displayBanner} = require ('./banner')
+const pLimit = require('p-limit'); 
+const { bech32 } = require('bech32');
+const { displayBanner } = require('./banner');
+
 
 const CONFIG = {
     threads: 20, // Config threads
@@ -35,15 +37,25 @@ function getTimestamp() {
 
 function getKeypairFromPrivateKey(privateKey) {
     try {
-        const cleaned = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey;
-        const seedBuffer = Buffer.from(cleaned, 'hex');
+        privateKey = privateKey.trim();
+        let seedBuffer;
+        if (privateKey.startsWith('suiprivkey')) {
+            const decoded = bech32.decode(privateKey, 1000);
+            const words = decoded.words;
+            seedBuffer = Buffer.from(bech32.fromWords(words));
+            if (seedBuffer.length === 33) {
+                seedBuffer = seedBuffer.slice(1);
+            }
+        } else {
+            const cleaned = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey;
+            seedBuffer = Buffer.from(cleaned, 'hex');
+        }
         if (seedBuffer.length !== 32) {
             throw new Error(`Expected seed length 32, got ${seedBuffer.length}`);
         }
         const seed = new Uint8Array(seedBuffer);
         const naclKeyPair = nacl.sign.keyPair.fromSeed(seed);
-        const keypair = Ed25519Keypair.fromSecretKey(naclKeyPair.secretKey.slice(0, 32));
-        return keypair;
+        return Ed25519Keypair.fromSecretKey(naclKeyPair.secretKey.slice(0, 32));
     } catch (error) {
         throw new Error(`Failed to create keypair: ${error.message}`);
     }
@@ -322,6 +334,7 @@ async function main() {
         }
     });
     console.log(chalk.cyan('\n=== Summary ==='));
+    const Table = require('cli-table3');
     const table = new Table({
         head: [
             chalk.cyan('Total Wallets'),
