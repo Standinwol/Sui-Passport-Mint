@@ -15,9 +15,8 @@ const pLimit = require('p-limit');
 const { bech32 } = require('bech32');
 const { displayBanner } = require('./banner');
 
-
 const CONFIG = {
-    threads: 20, // Config threads
+    threads: 20,
     maxRetries: 5,
     rpcUrl: 'https://sui-rpc.publicnode.com',
     privateKeyFile: 'priv.txt',
@@ -92,13 +91,24 @@ async function mintNFT(suiClient, keypair) {
         const tx = new TransactionBlock();
         const sharedObjectId = CONFIG.sharedObjectId;
         const walletAddress = keypair.getPublicKey().toSuiAddress();
-        const last5 = walletAddress.slice(-5);
-
+        
+        // List of common first names
+        const names = [
+            "James", "Mary", "John", "Patricia", "Robert", "Jennifer",
+            "Michael", "Linda", "William", "Elizabeth", "David", "Barbara",
+            "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Sarah",
+            "Charles", "Karen", "Christopher", "Nancy", "Daniel", "Lisa",
+            "Matthew", "Betty", "Anthony", "Margaret", "Mark", "Sandra"
+        ];
+        
+        // Select a random name from the list
+        const randomName = names[Math.floor(Math.random() * names.length)];
+        
         tx.moveCall({
             target: `${CONFIG.packageId}::${CONFIG.moduleName}::${CONFIG.functionName}`,
             arguments: [
                 tx.object(sharedObjectId),
-                tx.pure(last5),
+                tx.pure(randomName),
                 tx.pure(""),
                 tx.pure(""),
                 tx.pure(""),
@@ -334,7 +344,6 @@ async function main() {
         }
     });
     console.log(chalk.cyan('\n=== Summary ==='));
-    const Table = require('cli-table3');
     const table = new Table({
         head: [
             chalk.cyan('Total Wallets'),
